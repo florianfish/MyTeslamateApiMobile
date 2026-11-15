@@ -6,7 +6,7 @@ MyTeslamateApiMobile: personal Android app (Kotlin, Jetpack Compose) that reads 
 
 ## Build
 
-Same conventions as MyRadioPlayer: no Gradle wrapper (system `gradle` 9.9.1, JDK 17, compileSdk 37, targetSdk 34, AGP 9 with built-in Kotlin). CI = thin callers of `florianfish/Forge-Apk` reusable workflows (`build.yml` → debug APK + `debug` pre-release with fixed link, `release.yml` → signed release on `v*` tag, needs `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` secrets). No tests.
+Same conventions as MyRadioPlayer: no Gradle wrapper (system `gradle` 9.9.1, JDK 17, compileSdk 37, targetSdk 34, AGP 9 with built-in Kotlin). CI = thin callers of `florianfish/Forge-Apk` reusable workflows (`build.yml` → debug APK + `debug` pre-release with fixed link, `release.yml` → signed release on `v*` tag, needs `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` secrets). No tests. Debug builds use `applicationIdSuffix = ".debug"` and the label « TeslaMate debug » (`resValue app_name`), so debug and release install side by side.
 
 ## Architecture
 

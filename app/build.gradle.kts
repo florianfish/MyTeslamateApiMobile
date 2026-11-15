@@ -13,6 +13,7 @@ android {
         // Fournis par les workflows Forge-Apk (numéro de run, tag sans le « v »)
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
+        resValue("string", "app_name", "TeslaMate")
     }
     // Clé fixe pour que chaque release s'installe par-dessus la précédente
     signingConfigs {
@@ -24,7 +25,12 @@ android {
         }
     }
     buildTypes {
-        debug { versionNameSuffix = "-debug" + (System.getenv("GITHUB_RUN_NUMBER")?.let { ".$it" } ?: "") }
+        // La debug s'installe à côté de la release : autre identifiant, autre nom
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug" + (System.getenv("GITHUB_RUN_NUMBER")?.let { ".$it" } ?: "")
+            resValue("string", "app_name", "TeslaMate debug")
+        }
         release { signingConfig = signingConfigs.getByName("release") }
     }
     compileOptions {
