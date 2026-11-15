@@ -1,5 +1,6 @@
 package fr.florian.teslamate
 
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
