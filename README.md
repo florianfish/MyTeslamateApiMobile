@@ -7,6 +7,13 @@ Appli Android perso pour consulter et **filtrer** ses données TeslaMate via la 
 - **Charges** : lieu (raccourcis vers les plus fréquents), période, AC/DC, payantes ; énergie, coût, prix moyen au kWh ; détail avec courbe de puissance.
 - **Stats** : par mois ou par année : distance, énergie, coût, conso ; destinations et lieux de charge fréquents.
 
+<p align="center">
+  <img src="docs/etat.png" width="22%" alt="État" />
+  <img src="docs/trajets.png" width="22%" alt="Trajets" />
+  <img src="docs/charges.png" width="22%" alt="Charges" />
+  <img src="docs/stats.png" width="22%" alt="Stats" />
+</p>
+
 Synchronisation : tout l'historique au premier démarrage (gardé sur le téléphone), puis seulement les nouveautés à chaque ouverture.
 
 ## Installation
