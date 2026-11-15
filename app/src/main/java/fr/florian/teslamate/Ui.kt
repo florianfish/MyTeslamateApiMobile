@@ -24,7 +24,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -125,7 +124,37 @@ fun InfoRow(label: String, value: String) {
 // Carte OpenStreetMap (osmdroid)
 // ---------------------------------------------------------------------------
 
-data class MapMarker(val point: GeoPoint, val title: String = "")
+/** Type de repère : couleur et symbole de la pastille. */
+enum class MarkerKind(val color: Int, val glyph: String) {
+    CAR(0xFFE31937.toInt(), "🚗"),
+    START(0xFF43A047.toInt(), "A"),
+    END(0xFFE53935.toInt(), "B"),
+    CHARGE(0xFF1E88E5.toInt(), "⚡"),
+}
+
+data class MapMarker(val point: GeoPoint, val title: String = "", val kind: MarkerKind = MarkerKind.CAR)
+
+/** Pastille ronde (bordure blanche + symbole) dessinée à la volée, à la place du repère par défaut d'osmdroid. */
+private fun markerIcon(ctx: android.content.Context, kind: MarkerKind): android.graphics.drawable.BitmapDrawable {
+    val d = ctx.resources.displayMetrics.density
+    val size = (34 * d).toInt()
+    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    val r = size / 2f
+    p.color = 0x55000000 // ombre
+    c.drawCircle(r, r + d, r - d, p)
+    p.color = android.graphics.Color.WHITE
+    c.drawCircle(r, r, r - 2 * d, p)
+    p.color = kind.color
+    c.drawCircle(r, r, r - 4.5f * d, p)
+    p.color = android.graphics.Color.WHITE
+    p.textAlign = android.graphics.Paint.Align.CENTER
+    p.textSize = 15 * d
+    p.typeface = android.graphics.Typeface.DEFAULT_BOLD
+    c.drawText(kind.glyph, r, r - (p.descent() + p.ascent()) / 2, p)
+    return android.graphics.drawable.BitmapDrawable(ctx.resources, bmp)
+}
 
 /**
  * Carte OSM : tracé [path] et/ou [markers]. Non [interactive], elle ne capte pas les gestes
@@ -139,7 +168,8 @@ fun OsmMap(
     interactive: Boolean = true,
     zoom: Double = 16.0,
 ) {
-    val lineColor = MaterialTheme.colorScheme.primary.toArgb()
+    // Bleu franc bordé de blanc : lisible sur le fond clair des tuiles OSM, quel que soit le thème
+    val lineColor = 0xFF1565C0.toInt()
     Box(modifier.clip(RoundedCornerShape(12.dp))) {
         AndroidView(
             modifier = Modifier.matchParentSize(),
@@ -156,16 +186,24 @@ fun OsmMap(
                 map.overlays.clear()
                 val pts = path.map { OsmPoint(it.lat, it.lng) }
                 if (pts.size > 1) {
-                    map.overlays.add(Polyline(map).apply {
-                        setPoints(pts)
-                        outlinePaint.color = lineColor
-                        outlinePaint.strokeWidth = 10f
-                    })
+                    val dens = map.context.resources.displayMetrics.density
+                    // Liseré blanc dessous, tracé coloré dessus
+                    listOf(android.graphics.Color.WHITE to 7f, lineColor to 4f).forEach { (col, w) ->
+                        map.overlays.add(Polyline(map).apply {
+                            setPoints(pts)
+                            outlinePaint.color = col
+                            outlinePaint.strokeWidth = w * dens
+                            outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
+                            outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
+                            outlinePaint.isAntiAlias = true
+                        })
+                    }
                 }
                 markers.forEach { m ->
                     map.overlays.add(Marker(map).apply {
                         position = OsmPoint(m.point.lat, m.point.lng)
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        icon = markerIcon(map.context, m.kind)
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                         title = m.title
                     })
                 }

@@ -97,7 +97,7 @@ fun DrivesScreen(app: AppState, filter: DriveFilter, onFilter: (DriveFilter) -> 
             androidx.compose.material3.FilterChip(
                 selected = !filter.hideTiny,
                 onClick = { onFilter(filter.copy(hideTiny = !filter.hideTiny)) },
-                label = { Text("Trajets < 500 m") },
+                label = { Text("Inclure < 500 m") },
             )
         }
         DriveSummary(list)
@@ -190,7 +190,7 @@ fun DriveDetailScreen(app: AppState, id: Int) {
             OsmMap(
                 Modifier.fillMaxWidth().height(260.dp),
                 path = path,
-                markers = listOf(MapMarker(path.first(), "Départ"), MapMarker(path.last(), "Arrivée")),
+                markers = listOf(MapMarker(path.first(), "Départ", MarkerKind.START), MapMarker(path.last(), "Arrivée", MarkerKind.END)),
             )
         } else if (detail == null && error == null) {
             Centered { CircularProgressIndicator() }

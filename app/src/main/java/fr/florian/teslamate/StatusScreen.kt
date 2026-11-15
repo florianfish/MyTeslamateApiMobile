@@ -60,13 +60,10 @@ fun StatusScreen(app: AppState) {
             }
             return@Column
         }
-        val car = app.cars.firstOrNull { it.id == app.carId }
-
         // Batterie en grand
         Section("") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(car?.name.orEmpty(), style = MaterialTheme.typography.titleMedium)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text("${s.batteryLevel ?: "—"}", fontSize = 44.sp, fontWeight = FontWeight.Bold)
                         Text(" %", fontSize = 20.sp, modifier = Modifier.padding(bottom = 8.dp))

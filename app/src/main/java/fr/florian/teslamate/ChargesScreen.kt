@@ -90,7 +90,7 @@ fun ChargesScreen(app: AppState, filter: ChargeFilter, onFilter: (ChargeFilter) 
         Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DropdownChip("Tri : ${filter.sort.label}", ChargeSort.entries.map { it to it.label }) { onFilter(filter.copy(sort = it)) }
             FilterChip(selected = filter.paidOnly, onClick = { onFilter(filter.copy(paidOnly = !filter.paidOnly)) }, label = { Text("Payantes") })
-            FilterChip(selected = !filter.hideEmpty, onClick = { onFilter(filter.copy(hideEmpty = !filter.hideEmpty)) }, label = { Text("Vides") })
+            FilterChip(selected = !filter.hideEmpty, onClick = { onFilter(filter.copy(hideEmpty = !filter.hideEmpty)) }, label = { Text("Inclure vides") })
         }
         ChargeSummary(list)
         HorizontalDivider()
@@ -171,7 +171,7 @@ fun ChargeDetailScreen(app: AppState, id: Int) {
         Text(c.start.fmtDateTime(), style = MaterialTheme.typography.titleMedium)
         Text(c.address, style = MaterialTheme.typography.bodyMedium)
         if (c.latitude != null && c.longitude != null) {
-            OsmMap(Modifier.fillMaxWidth().height(200.dp), markers = listOf(MapMarker(GeoPoint(c.latitude, c.longitude), c.address)))
+            OsmMap(Modifier.fillMaxWidth().height(200.dp), markers = listOf(MapMarker(GeoPoint(c.latitude, c.longitude), c.address, MarkerKind.CHARGE)))
         }
         Section("Charge") {
             StatGrid(
