@@ -40,6 +40,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true // BuildConfig.VERSION_NAME, affiché dans les réglages
+        resValues = true // nom de l'appli différent en debug
     }
 }
 
