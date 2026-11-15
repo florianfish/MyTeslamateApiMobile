@@ -47,6 +47,7 @@ fun SettingsScreen(app: AppState) {
     var testResult by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val edited = Connection(url, basic, user, secret)
+    val insecure = url.trim().startsWith("http://", ignoreCase = true)
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
@@ -59,6 +60,9 @@ fun SettingsScreen(app: AppState) {
                 label = { Text("Adresse de l'API") },
                 placeholder = { Text("https://xxxx.api.myteslamate.com") },
                 singleLine = true,
+                // HTTPS obligatoire : le mot de passe ne doit jamais circuler en clair
+                isError = insecure,
+                supportingText = { if (insecure) Text("Adresse en https:// obligatoire") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -88,11 +92,11 @@ fun SettingsScreen(app: AppState) {
                 },
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(enabled = url.isNotBlank(), onClick = {
+                OutlinedButton(enabled = url.isNotBlank() && !insecure, onClick = {
                     testResult = "Test en cours…"
                     scope.launch { testResult = app.test(edited) }
                 }) { Text("Tester") }
-                Button(enabled = url.isNotBlank(), onClick = { app.saveConnection(edited); testResult = null }) { Text("Enregistrer") }
+                Button(enabled = url.isNotBlank() && !insecure, onClick = { app.saveConnection(edited); testResult = null }) { Text("Enregistrer") }
             }
             testResult?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         }

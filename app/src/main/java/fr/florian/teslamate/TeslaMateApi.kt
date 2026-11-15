@@ -1,6 +1,8 @@
 package fr.florian.teslamate
 
 import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
@@ -8,7 +10,12 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.security.KeyStore
 import java.time.OffsetDateTime
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 // ---------------------------------------------------------------------------
 // Connexion
@@ -38,22 +45,69 @@ data class Connection(
 
         fun load(ctx: Context): Connection {
             val p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            return Connection(
+            val c = Connection(
                 url = p.getString("url", "") ?: "",
                 basic = p.getBoolean("basic", true),
                 user = p.getString("user", "") ?: "",
-                secret = p.getString("secret", "") ?: "",
+                secret = p.getString("secret_enc", null)?.let { SecretBox.decrypt(it) }
+                    ?: p.getString("secret", "") ?: "",
             )
+            // Migration : ancien mot de passe en clair → chiffré
+            if (p.contains("secret")) save(ctx, c)
+            return c
         }
 
         fun save(ctx: Context, c: Connection) {
+            val secret = c.secret.trim()
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putString("url", c.url.trim())
                 .putBoolean("basic", c.basic)
                 .putString("user", c.user.trim())
-                .putString("secret", c.secret.trim())
+                .putString("secret_enc", if (secret.isEmpty()) "" else SecretBox.encrypt(secret))
+                .remove("secret")
                 .apply()
         }
+    }
+}
+
+/**
+ * Chiffrement du mot de passe / jeton : AES-GCM avec une clé du Keystore Android,
+ * générée sur le téléphone et non exportable. Les préférences ne contiennent que « iv:chiffré ».
+ */
+object SecretBox {
+    private const val ALIAS = "connexion"
+
+    private fun key(): SecretKey {
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (ks.getKey(ALIAS, null) as? SecretKey)?.let { return it }
+        return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
+            init(
+                KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setKeySize(256)
+                    .build(),
+            )
+        }.generateKey()
+    }
+
+    fun encrypt(plain: String): String {
+        val c = Cipher.getInstance("AES/GCM/NoPadding")
+        c.init(Cipher.ENCRYPT_MODE, key())
+        val b64 = { b: ByteArray -> Base64.encodeToString(b, Base64.NO_WRAP) }
+        return b64(c.iv) + ":" + b64(c.doFinal(plain.toByteArray()))
+    }
+
+    /** null si illisible (clé perdue, donnée corrompue) : il faudra ressaisir le mot de passe. */
+    fun decrypt(stored: String): String? = try {
+        if (stored.isEmpty()) "" else {
+            val (iv, data) = stored.split(':', limit = 2).map { Base64.decode(it, Base64.NO_WRAP) }
+            val c = Cipher.getInstance("AES/GCM/NoPadding")
+            c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, iv))
+            String(c.doFinal(data))
+        }
+    } catch (_: Exception) {
+        null
     }
 }
 
