@@ -148,6 +148,8 @@ data class DriveDetail(val drive: Drive, val path: List<GeoPoint>, val speed: Li
 
 data class ChargeDetail(val charge: Charge, val power: List<SeriesPoint>, val battery: List<SeriesPoint>)
 
+data class SoftwareUpdate(val id: Int, val start: OffsetDateTime, val end: OffsetDateTime?, val version: String)
+
 data class BatteryHealth(
     val healthPercent: Double?,
     val maxCapacity: Double?,
@@ -263,6 +265,13 @@ class TeslaMateApi(private val conn: Connection) {
     }
 
     /** Tous les trajets (pagination par lots), optionnellement à partir d'une date. */
+    fun updates(carId: Int): List<SoftwareUpdate> =
+        (get("/api/v1/cars/$carId/updates").optJSONArray("updates") ?: JSONArray()).objects().mapNotNull { o ->
+            val start = o.date("start_date") ?: return@mapNotNull null
+            // « 2025.44.3 35dbcb56347a » : on garde le numéro, sans l'empreinte du build
+            SoftwareUpdate(o.optInt("update_id"), start, o.date("end_date"), o.str("version").substringBefore(' '))
+        }.sortedByDescending { it.start }
+
     /** [progress] reçoit le nombre d'éléments déjà téléchargés. */
     fun drives(carId: Int, since: OffsetDateTime? = null, progress: (Int) -> Unit = {}): List<Drive> =
         paged("/api/v1/cars/$carId/drives", "drives", since, progress).map(::parseDrive)

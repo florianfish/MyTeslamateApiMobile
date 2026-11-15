@@ -29,6 +29,28 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         private set
     var health by mutableStateOf<BatteryHealth?>(null)
         private set
+    var updates by mutableStateOf<List<SoftwareUpdate>>(emptyList())
+        private set
+
+    /** Tracés simplifiés des trajets (id → points), gardés sur disque : le détail d'un trajet pèse lourd. */
+    var paths by mutableStateOf<Map<Int, List<GeoPoint>>>(emptyMap())
+        private set
+    var pathsLoading by mutableStateOf<String?>(null)
+        private set
+
+    /** Paramètres de comparaison avec une voiture thermique. */
+    var fuelConsumption by mutableStateOf(prefs().getFloat("fuel_l100", 6.5f).toDouble())
+        private set
+    var fuelPrice by mutableStateOf(prefs().getFloat("fuel_price", 1.85f).toDouble())
+        private set
+
+    private fun prefs() = ctx.getSharedPreferences("app", Context.MODE_PRIVATE)
+
+    fun setFuel(l100: Double, price: Double) {
+        fuelConsumption = l100
+        fuelPrice = price
+        prefs().edit().putFloat("fuel_l100", l100.toFloat()).putFloat("fuel_price", price.toFloat()).apply()
+    }
     var loading by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
@@ -51,7 +73,7 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         connection = Connection.load(ctx)
         if (changed) {
             Cache.clear(ctx)
-            drives = emptyList(); charges = emptyList(); status = null; health = null; cars = emptyList()
+            drives = emptyList(); charges = emptyList(); status = null; health = null; cars = emptyList(); paths = emptyMap(); updates = emptyList()
         }
         refresh()
     }
@@ -60,13 +82,17 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         if (id == carId) return
         carId = id
         ctx.getSharedPreferences("app", Context.MODE_PRIVATE).edit().putInt("car", id).apply()
-        drives = emptyList(); charges = emptyList(); status = null; health = null
+        drives = emptyList(); charges = emptyList(); status = null; health = null; updates = emptyList(); paths = emptyMap()
         loadCache()
         refresh()
     }
 
     private fun loadCache() {
         if (carId == 0) return
+        paths = Cache.loadRaw(ctx, "paths_$carId.json").mapNotNull { o ->
+            val arr = o.optJSONArray("p") ?: return@mapNotNull null
+            o.optInt("id") to (0 until arr.length() step 2).map { GeoPoint(arr.getDouble(it), arr.getDouble(it + 1)) }
+        }.toMap()
         drives = Cache.loadRaw(ctx, "drives_$carId.json").mapNotNull { runCatching { TeslaMateApi.parseDrive(it) }.getOrNull() }
         charges = Cache.loadRaw(ctx, "charges_$carId.json").mapNotNull { runCatching { TeslaMateApi.parseCharge(it) }.getOrNull() }
     }
@@ -99,6 +125,7 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
                 val st = withContext(Dispatchers.IO) { runCatching { api.status(id) }.getOrNull() }
                 status = st
                 health = withContext(Dispatchers.IO) { runCatching { api.batteryHealth(id) }.getOrNull() } ?: health
+                updates = withContext(Dispatchers.IO) { runCatching { api.updates(id) }.getOrNull() } ?: updates
 
                 // Incrémental : on repart un jour avant le plus récent connu (les doublons sont fusionnés par id)
                 val dSince = if (full) null else drives.maxOfOrNull { it.start }?.minusDays(1)
@@ -132,6 +159,34 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         }
     }
 
+    /** Télécharge les tracés manquants des trajets [ids] (au plus [max]), puis les garde en cache. */
+    fun loadPaths(ids: List<Int>, max: Int = 40) {
+        if (pathsLoading != null || !connection.configured) return
+        val missing = ids.filter { it !in paths }.take(max)
+        if (missing.isEmpty()) return
+        val id = carId
+        val api = this@AppState.api
+        scope.launch {
+            try {
+                missing.forEachIndexed { i, driveId ->
+                    pathsLoading = "Tracés : ${i + 1} / ${missing.size}…"
+                    val pts = withContext(Dispatchers.IO) {
+                        runCatching { api.drive(id, driveId).path.simplify(80) }.getOrNull()
+                    } ?: return@forEachIndexed
+                    paths = paths + (driveId to pts)
+                }
+                val snapshot = paths
+                withContext(Dispatchers.IO) {
+                    Cache.saveRaw(ctx, "paths_$id.json", snapshot.map { (k, v) ->
+                        org.json.JSONObject().put("id", k).put("p", org.json.JSONArray(v.flatMap { listOf(it.lat, it.lng) }))
+                    })
+                }
+            } finally {
+                pathsLoading = null
+            }
+        }
+    }
+
     private fun <T, K : Comparable<K>> merge(old: List<T>, new: List<T>, id: (T) -> Int, key: (T) -> K): List<T> {
         val byId = LinkedHashMap<Int, T>()
         old.forEach { byId[id(it)] = it }
@@ -149,4 +204,11 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
             "Échec : ${e.message ?: e.javaClass.simpleName}"
         }
     }
+}
+
+/** Garde au plus [max] points régulièrement espacés (premier et dernier inclus). */
+fun List<GeoPoint>.simplify(max: Int): List<GeoPoint> {
+    if (size <= max) return this
+    val step = (size - 1).toDouble() / (max - 1)
+    return (0 until max).map { this[(it * step).toInt().coerceAtMost(size - 1)] }
 }

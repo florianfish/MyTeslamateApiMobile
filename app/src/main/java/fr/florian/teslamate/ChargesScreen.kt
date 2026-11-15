@@ -1,6 +1,7 @@
 package fr.florian.teslamate
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,6 +47,7 @@ data class ChargeFilter(
     val sort: ChargeSort = ChargeSort.RECENT,
     val hideEmpty: Boolean = true,
     val paidOnly: Boolean = false,
+    val map: Boolean = false,
 )
 
 fun List<Charge>.filtered(f: ChargeFilter): List<Charge> {
@@ -87,19 +89,55 @@ fun ChargesScreen(app: AppState, filter: ChargeFilter, onFilter: (ChargeFilter) 
         }
         PeriodChips(filter.period) { onFilter(filter.copy(period = it)) }
         ChoiceChips(ChargeType.entries.map { it to it.label }, filter.type) { onFilter(filter.copy(type = it)) }
-        Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DropdownChip("Tri : ${filter.sort.label}", ChargeSort.entries.map { it to it.label }) { onFilter(filter.copy(sort = it)) }
             FilterChip(selected = filter.paidOnly, onClick = { onFilter(filter.copy(paidOnly = !filter.paidOnly)) }, label = { Text("Payantes") })
             FilterChip(selected = !filter.hideEmpty, onClick = { onFilter(filter.copy(hideEmpty = !filter.hideEmpty)) }, label = { Text("Inclure vides") })
+            FilterChip(
+                selected = filter.map,
+                onClick = { onFilter(filter.copy(map = !filter.map)) },
+                leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Map, null) },
+                label = { Text("Carte") },
+            )
         }
         ChargeSummary(list)
         HorizontalDivider()
         if (list.isEmpty()) {
             Centered { Text(if (app.loading) "Chargement de l'historique…" else "Aucune charge pour ces filtres", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        } else if (filter.map) {
+            ChargesMap(list)
+            return@Column
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
             items(list, key = { it.id }) { c -> ChargeRow(c) { onOpen(c.id) } }
         }
+    }
+}
+
+/** Carte des lieux de charge de la sélection : un repère par lieu, avec le total (toucher pour le détail). */
+@Composable
+private fun ChargesMap(list: List<Charge>) {
+    val markers = remember(list) {
+        list.filter { it.latitude != null && it.longitude != null }
+            .groupBy { it.address.ifBlank { "%.3f,%.3f".format(it.latitude, it.longitude) } }
+            .map { (place, cs) ->
+                val first = cs.first()
+                MapMarker(
+                    GeoPoint(first.latitude!!, first.longitude!!),
+                    "$place\n${cs.size} charge(s) · ${kwh(cs.sumOf { it.energyAdded })}" +
+                        (cs.sumOf { it.cost ?: 0.0 }.takeIf { it > 0 }?.let { " · ${euro(it)}" } ?: ""),
+                    MarkerKind.CHARGE,
+                )
+            }
+    }
+    Column(Modifier.fillMaxSize().padding(12.dp)) {
+        Text(
+            "${markers.size} lieu(x) · toucher un repère pour le détail",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        OsmMap(Modifier.fillMaxSize(), markers = markers, zoom = 14.0)
     }
 }
 

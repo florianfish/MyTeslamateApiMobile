@@ -166,6 +166,8 @@ fun OsmMap(
     modifier: Modifier = Modifier,
     path: List<GeoPoint> = emptyList(),
     markers: List<MapMarker> = emptyList(),
+    /** Plusieurs tracés (carte d'une sélection de trajets). */
+    paths: List<List<GeoPoint>> = emptyList(),
     interactive: Boolean = true,
     zoom: Double = 16.0,
 ) {
@@ -185,11 +187,12 @@ fun OsmMap(
             },
             update = { map ->
                 map.overlays.clear()
-                val pts = path.map { OsmPoint(it.lat, it.lng) }
-                if (pts.size > 1) {
-                    val dens = map.context.resources.displayMetrics.density
-                    // Liseré blanc dessous, tracé coloré dessus
-                    listOf(android.graphics.Color.WHITE to 7f, lineColor to 4f).forEach { (col, w) ->
+                val lines = (listOf(path) + paths).filter { it.size > 1 }.map { l -> l.map { OsmPoint(it.lat, it.lng) } }
+                val dens = map.context.resources.displayMetrics.density
+                // Liseré blanc dessous, tracé coloré dessus (plus fin quand il y a beaucoup de tracés)
+                val thin = lines.size > 1
+                lines.forEach { pts ->
+                    listOf(android.graphics.Color.WHITE to (if (thin) 4f else 7f), lineColor to (if (thin) 2.5f else 4f)).forEach { (col, w) ->
                         map.overlays.add(Polyline(map).apply {
                             setPoints(pts)
                             outlinePaint.color = col
@@ -200,6 +203,7 @@ fun OsmMap(
                         })
                     }
                 }
+                val pts = lines.flatten()
                 markers.forEach { m ->
                     map.overlays.add(Marker(map).apply {
                         position = OsmPoint(m.point.lat, m.point.lng)

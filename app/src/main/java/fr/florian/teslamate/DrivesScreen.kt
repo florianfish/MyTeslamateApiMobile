@@ -1,6 +1,7 @@
 package fr.florian.teslamate
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -56,6 +57,8 @@ data class DriveFilter(
     val query: String = "",
     val sort: DriveSort = DriveSort.RECENT,
     val hideTiny: Boolean = true,
+    /** Affichage carte au lieu de la liste. */
+    val map: Boolean = false,
 )
 
 fun List<Drive>.filtered(f: DriveFilter): List<Drive> {
@@ -92,22 +95,50 @@ fun DrivesScreen(app: AppState, filter: DriveFilter, onFilter: (DriveFilter) -> 
         Row(verticalAlignment = Alignment.CenterVertically) {
             ChoiceChips(DistanceRange.entries.map { it to it.label }, filter.distance) { onFilter(filter.copy(distance = it)) }
         }
-        Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DropdownChip("Tri : ${filter.sort.label}", DriveSort.entries.map { it to it.label }) { onFilter(filter.copy(sort = it)) }
             androidx.compose.material3.FilterChip(
                 selected = !filter.hideTiny,
                 onClick = { onFilter(filter.copy(hideTiny = !filter.hideTiny)) },
                 label = { Text("Inclure < 500 m") },
             )
+            androidx.compose.material3.FilterChip(
+                selected = filter.map,
+                onClick = { onFilter(filter.copy(map = !filter.map)) },
+                leadingIcon = { Icon(androidx.compose.material.icons.Icons.Default.Map, null) },
+                label = { Text("Carte") },
+            )
         }
         DriveSummary(list)
         HorizontalDivider()
         if (list.isEmpty()) {
             Centered { Text(if (app.loading) "Chargement de l'historique…" else "Aucun trajet pour ces filtres", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        } else if (filter.map) {
+            DrivesMap(app, list)
+            return@Column
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
             items(list, key = { it.id }) { d -> DriveRow(d) { onOpen(d.id) } }
         }
+    }
+}
+
+/** Carte des trajets sélectionnés : tracés simplifiés, téléchargés une fois puis gardés en cache. */
+@Composable
+private fun DrivesMap(app: AppState, list: List<Drive>) {
+    val max = 40
+    val ids = remember(list) { list.sortedByDescending { it.start }.take(max).map { it.id } }
+    LaunchedEffect(ids) { app.loadPaths(ids, max) }
+    val shown = ids.mapNotNull { app.paths[it] }
+    Column(Modifier.fillMaxSize().padding(12.dp)) {
+        Text(
+            app.pathsLoading
+                ?: ("${shown.size} trajet(s) affiché(s)" + if (list.size > max) " · les $max plus récents de la sélection" else ""),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
+        OsmMap(Modifier.fillMaxSize(), paths = shown)
     }
 }
 

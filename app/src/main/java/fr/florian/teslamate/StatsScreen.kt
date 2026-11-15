@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -35,8 +36,13 @@ private data class Bucket(
     val consumption get() = if (km > 0 && driveKwh > 0) driveKwh * 1000 / km else 0.0
 }
 
+enum class StatsView(val label: String) {
+    SUMMARY("Bilan"), ROUTES("Trajets types"), TEMPERATURE("Température"), IDLE("Pertes à l'arrêt"), SAVINGS("Économies"), UPDATES("Mises à jour"),
+}
+
 @Composable
 fun StatsScreen(app: AppState) {
+    var view by rememberSaveable { mutableStateOf(StatsView.SUMMARY) }
     val years = remember(app.drives, app.charges) {
         (app.drives.map { it.start.local().year } + app.charges.map { it.start.local().year })
             .filter { it > 2000 }.distinct().sortedDescending()
@@ -51,11 +57,26 @@ fun StatsScreen(app: AppState) {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Spacer(Modifier.height(8.dp))
-        ChoiceChips(years.map { it to it.toString() } + (0 to "Tout"), year) { chosen = it }
+        ChoiceChips(StatsView.entries.map { it to it.label }, view) { view = it }
+        if (view != StatsView.UPDATES) {
+            Spacer(Modifier.height(4.dp))
+            ChoiceChips(years.map { it to it.toString() } + (0 to "Tout"), year) { chosen = it }
+        }
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (view == StatsView.UPDATES) {
+                UpdatesSection(app.updates)
+                return@Column
+            }
             if (drives.isEmpty() && charges.isEmpty()) {
                 Centered { Text(if (app.loading) "Chargement de l'historique…" else "Pas de données", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 return@Column
+            }
+            when (view) {
+                StatsView.ROUTES -> { RoutesSection(drives, app.drives); return@Column }
+                StatsView.TEMPERATURE -> { TemperatureSection(drives); return@Column }
+                StatsView.IDLE -> { IdleSection(app, year); return@Column }
+                StatsView.SAVINGS -> { SavingsSection(app, drives, charges); return@Column }
+                else -> {}
             }
             val energy = charges.sumOf { it.energyAdded }
             val cost = charges.sumOf { it.cost ?: 0.0 }
