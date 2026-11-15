@@ -1,0 +1,18 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Workflow partagé : https://github.com/florianfish/Forge-Apk
+jobs:
+  build:
+    uses: florianfish/Forge-Apk/.github/workflows/android-build.yml@main
+    permissions:
+      contents: write        # pré-release « debug »
+      pull-requests: write   # commentaire sur les PR
+    with:
+      apk-name: MyTeslamateApiMobile
+      gradle-version: "9.9.1"

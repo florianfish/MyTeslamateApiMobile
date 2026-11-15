@@ -1,0 +1,25 @@
+name: Release APK
+
+on:
+  push:
+    tags: ["v*"]
+  # Bouton « Run workflow » de l'onglet Actions : calcule la version suivante à partir du dernier tag
+  workflow_dispatch:
+    inputs:
+      type:
+        description: "Type de version (1.4.0 → mineure 1.5.0, correctif 1.4.1, majeure 2.0.0)"
+        type: choice
+        options: [mineure, correctif, majeure]
+        default: mineure
+
+# Workflow partagé : https://github.com/florianfish/Forge-Apk
+jobs:
+  release:
+    uses: florianfish/Forge-Apk/.github/workflows/android-release.yml@main
+    permissions:
+      contents: write
+    with:
+      apk-name: MyTeslamateApiMobile
+      type: ${{ inputs.type }}
+      gradle-version: "9.9.1"
+    secrets: inherit
