@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private fun stateLabel(s: CarStatus): String = when {
-    s.chargingState.equals("Charging", true) -> "En charge"
+    s.isCharging -> "En charge"
     s.shiftState in listOf("D", "R", "N") -> "En route"
     else -> when (s.state.lowercase()) {
         "online" -> "En ligne"
@@ -38,14 +38,14 @@ private fun stateLabel(s: CarStatus): String = when {
 
 private fun chargingLabel(s: CarStatus): String = when {
     !s.pluggedIn -> "Débranchée"
-    s.chargingState.equals("Charging", true) -> "En charge"
+    s.isCharging -> "En charge"
     s.chargingState.equals("Complete", true) -> "Charge terminée"
     s.chargingState.equals("Stopped", true) -> "Branchée, en attente"
     else -> "Branchée"
 }
 
 @Composable
-fun StatusScreen(app: AppState) {
+fun StatusScreen(app: AppState, onOpenCharge: (Int) -> Unit = {}) {
     val s = app.status
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
@@ -75,13 +75,14 @@ fun StatusScreen(app: AppState) {
             }
             BatteryBar(s.batteryLevel, s.chargeLimit)
             Text(
-                "Limite ${s.chargeLimit ?: "—"} % · ${chargingLabel(s)}" +
-                    (if (s.chargingState.equals("Charging", true)) " · ${num(s.chargerPower, 0)} kW · +${kwh(s.chargeEnergyAdded)}" +
-                        (s.timeToFull?.takeIf { it > 0 }?.let { " · plein dans ${duration((it * 60).toInt())}" } ?: "") else ""),
+                "Limite ${s.chargeLimit ?: "—"} % · ${chargingLabel(s)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        // En charge : détail en direct (puissance, fin, coût estimé…), rafraîchi automatiquement
+        if (s.isCharging) ChargingCard(app, s, onOpenCharge)
 
         if (s.latitude != null && s.longitude != null) {
             OsmMap(

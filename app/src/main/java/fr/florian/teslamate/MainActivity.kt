@@ -82,7 +82,14 @@ class MainActivity : ComponentActivity() {
     // Chaque ouverture (ou retour) dans l'appli : synchronisation du delta
     override fun onStart() {
         super.onStart()
+        app.setForeground(true)
         app.refresh()
+    }
+
+    // En arrière-plan : plus aucun rafraîchissement en direct
+    override fun onStop() {
+        app.setForeground(false)
+        super.onStop()
     }
 }
 
@@ -106,6 +113,7 @@ fun MainScreen(app: AppState) {
                         Text(
                             when {
                                 openDrive != null -> "Trajet"
+                                openCharge != null && openCharge == app.currentCharge?.id -> "Charge en cours"
                                 openCharge != null -> "Charge"
                                 else -> app.cars.firstOrNull { it.id == app.carId }?.name ?: "TeslaMate"
                             },
@@ -149,10 +157,12 @@ fun MainScreen(app: AppState) {
         Box(Modifier.padding(pad).fillMaxSize()) {
             when {
                 openDrive != null -> DriveDetailScreen(app, openDrive!!)
+                // Charge en cours : vue en direct ; une fois terminée, on bascule sur le détail classique
+                openCharge != null && openCharge == app.currentCharge?.id -> CurrentChargeScreen(app)
                 openCharge != null -> ChargeDetailScreen(app, openCharge!!)
                 !app.connection.configured && tab != Tab.SETTINGS -> SettingsScreen(app)
                 else -> when (tab) {
-                    Tab.STATUS -> StatusScreen(app)
+                    Tab.STATUS -> StatusScreen(app) { openCharge = it }
                     Tab.DRIVES -> DrivesScreen(app, driveFilter, { driveFilter = it }) { openDrive = it }
                     Tab.CHARGES -> ChargesScreen(app, chargeFilter, { chargeFilter = it }) { openCharge = it }
                     Tab.STATS -> StatsScreen(app)

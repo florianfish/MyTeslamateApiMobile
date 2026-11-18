@@ -110,7 +110,7 @@ fun ChargesScreen(app: AppState, filter: ChargeFilter, onFilter: (ChargeFilter) 
             return@Column
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-            items(list, key = { it.id }) { c -> ChargeRow(c) { onOpen(c.id) } }
+            items(list, key = { it.id }) { c -> ChargeRow(c, live = c.id == app.currentCharge?.id) { onOpen(c.id) } }
         }
     }
 }
@@ -162,13 +162,17 @@ private fun ChargeSummary(list: List<Charge>) {
 }
 
 @Composable
-private fun ChargeRow(c: Charge, onClick: () -> Unit) {
+private fun ChargeRow(c: Charge, live: Boolean = false, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(c.start.fmtDateTime(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                c.start.fmtDateTime() + if (live) " · en cours" else "",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (live) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(c.address.ifBlank { "?" }, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
             Text(
                 "${c.startBattery ?: "—"} → ${c.endBattery ?: "—"} % · ${duration(c.durationMin)}" +
@@ -220,7 +224,11 @@ fun ChargeDetailScreen(app: AppState, id: Int) {
                     "Rendement" to (c.energyUsed?.takeIf { it > 0 }?.let { "${num(c.energyAdded / it * 100, 0)} %" } ?: "—"),
                     "Durée" to duration(c.durationMin),
                     "Puissance moy." to (c.avgPowerKw?.let { "${num(it, 1)} kW" } ?: "—"),
-                    "Type" to (if (c.isDc) "DC" else "AC"),
+                    "Type" to when (detail?.dc) {
+                        true -> "DC"
+                        false -> "AC"
+                        null -> if (c.isDc) "DC (estimé)" else "AC (estimé)"
+                    },
                     "Batterie" to "${c.startBattery ?: "—"} → ${c.endBattery ?: "—"} %",
                     "Coût" to euro(c.cost),
                     "Prix" to (if ((c.cost ?: 0.0) > 0 && c.energyAdded > 0) "${num(c.cost!! / c.energyAdded, 3)} €/kWh" else "—"),

@@ -131,7 +131,14 @@ data class CarStatus(
     val chargingState: String,
     val chargerPower: Double?,
     val chargeEnergyAdded: Double?,
+    /** Heures restantes jusqu'à la limite de charge. */
     val timeToFull: Double?,
+    val chargerVoltage: Double?,
+    val chargerCurrent: Double?,
+    val chargerPhases: Int?,
+    /** Intensité demandée par la voiture (réglage) et maximum possible, en A. */
+    val chargeCurrentRequest: Int?,
+    val chargeCurrentRequestMax: Int?,
     val insideTemp: Double?,
     val outsideTemp: Double?,
     val climateOn: Boolean,
@@ -151,7 +158,9 @@ data class CarStatus(
     val unitPressure: String,
     val shiftState: String,
     val speed: Double?,
-)
+) {
+    val isCharging: Boolean get() = chargingState.equals("Charging", true)
+}
 
 data class Drive(
     val id: Int,
@@ -200,7 +209,83 @@ data class SeriesPoint(val time: OffsetDateTime?, val value: Double)
 
 data class DriveDetail(val drive: Drive, val path: List<GeoPoint>, val speed: List<SeriesPoint>, val power: List<SeriesPoint>, val elevation: List<SeriesPoint>)
 
-data class ChargeDetail(val charge: Charge, val power: List<SeriesPoint>, val battery: List<SeriesPoint>)
+/** [dc] : type réel d'après les points de charge (null si indéterminé). */
+data class ChargeDetail(val charge: Charge, val power: List<SeriesPoint>, val battery: List<SeriesPoint>, val dc: Boolean?)
+
+/** Un point de la courbe d'une charge (charge_details), environ toutes les 25 s. */
+data class ChargePoint(
+    val time: OffsetDateTime?,
+    val battery: Int?,
+    val energyAdded: Double?,
+    val power: Double?, // kW
+    val voltage: Double?,
+    val current: Double?, // intensité réelle (A)
+    val pilotCurrent: Double?, // intensité annoncée par la borne (A)
+    val phases: Int?,
+    val ratedRange: Double?,
+    val heaterOn: Boolean,
+    val fastCharger: Boolean?,
+)
+
+/**
+ * Type de charge d'après les points : DC si la voiture signale un chargeur rapide,
+ * ou si la plupart des points actifs n'ont pas de phase (règle de TeslaMate). null sans point actif.
+ */
+fun List<ChargePoint>.isDc(): Boolean? {
+    val active = filter { (it.power ?: 0.0) > 0 }
+    if (active.isEmpty()) return null
+    if (active.any { it.fastCharger == true }) return true
+    return active.count { (it.phases ?: 0) == 0 } * 2 > active.size
+}
+
+/** Charge en cours (GET /charges/current), complétée en direct par les relevés de /status. */
+data class CurrentCharge(
+    val id: Int,
+    val start: OffsetDateTime,
+    val address: String,
+    val energyAdded: Double,
+    val cost: Double?,
+    val startBattery: Int?,
+    val battery: Int?,
+    val startRange: Double?,
+    val range: Double?,
+    val outsideTemp: Double?,
+    val cable: String,
+    val fastChargerType: String,
+    /** Ordre chronologique. */
+    val points: List<ChargePoint>,
+) {
+    val addedRange: Double? get() = if (startRange != null && range != null) range - startRange else null
+    val dc: Boolean? get() = points.isDc()
+    val last: ChargePoint? get() = points.lastOrNull()
+
+    fun minutes(now: OffsetDateTime = OffsetDateTime.now()): Int =
+        java.time.Duration.between(start, now).toMinutes().toInt().coerceAtLeast(0)
+
+    /** Ajoute un relevé de /status (léger) au lieu de retélécharger toute la courbe. */
+    fun withStatus(s: CarStatus, now: OffsetDateTime = OffsetDateTime.now()): CurrentCharge {
+        val prev = last
+        val p = ChargePoint(
+            time = now,
+            battery = s.batteryLevel,
+            energyAdded = s.chargeEnergyAdded,
+            power = s.chargerPower,
+            voltage = s.chargerVoltage,
+            current = s.chargerCurrent,
+            pilotCurrent = prev?.pilotCurrent, // absent de /status
+            phases = s.chargerPhases,
+            ratedRange = s.ratedRange,
+            heaterOn = prev?.heaterOn ?: false,
+            fastCharger = prev?.fastCharger,
+        )
+        return copy(
+            energyAdded = s.chargeEnergyAdded ?: energyAdded,
+            battery = s.batteryLevel ?: battery,
+            range = s.ratedRange ?: range,
+            points = points + p,
+        )
+    }
+}
 
 data class SoftwareUpdate(val id: Int, val start: OffsetDateTime, val end: OffsetDateTime?, val version: String)
 
@@ -285,6 +370,11 @@ class TeslaMateApi(private val conn: Connection) {
             chargerPower = ch.dbl("charger_power"),
             chargeEnergyAdded = ch.dbl("charge_energy_added"),
             timeToFull = ch.dbl("time_to_full_charge"),
+            chargerVoltage = ch.dbl("charger_voltage"),
+            chargerCurrent = ch.dbl("charger_actual_current"),
+            chargerPhases = ch.int("charger_phases"),
+            chargeCurrentRequest = ch.int("charge_current_request"),
+            chargeCurrentRequestMax = ch.int("charge_current_request_max"),
             insideTemp = cl.dbl("inside_temp"),
             outsideTemp = cl.dbl("outside_temp"),
             climateOn = cl.optBoolean("is_climate_on"),
@@ -372,6 +462,42 @@ class TeslaMateApi(private val conn: Connection) {
                 d.optJSONObject("charger_details")?.dbl("charger_power")?.let { SeriesPoint(d.date("date"), it) }
             },
             battery = details.series("battery_level"),
+            dc = details.map(::parseChargePoint).isDc(),
+        )
+    }
+
+    /**
+     * Charge en cours, ou null s'il n'y en a pas (réponse vide, 404, ou version de
+     * TeslaMate API sans cet endpoint). Seule une erreur d'accès est remontée.
+     */
+    fun currentCharge(carId: Int): CurrentCharge? {
+        val data = try {
+            get("/api/v1/cars/$carId/charges/current")
+        } catch (e: ApiException) {
+            if (e.unauthorized) throw e else return null
+        }
+        val o = data.optJSONObject("charge") ?: return null
+        if (!o.has("charge_id") || (o.has("is_charging") && !o.optBoolean("is_charging"))) return null
+        val bat = o.optJSONObject("battery_details") ?: JSONObject()
+        val range = o.optJSONObject("rated_range") ?: JSONObject()
+        val raw = (o.optJSONArray("charge_details") ?: JSONArray()).objects()
+        // L'API renvoie les points du plus récent au plus ancien
+        val points = raw.map(::parseChargePoint).sortedBy { it.time }
+        val latest = raw.maxByOrNull { it.date("date") ?: OffsetDateTime.MIN }
+        return CurrentCharge(
+            id = o.getInt("charge_id"),
+            start = o.date("start_date") ?: OffsetDateTime.now(),
+            address = o.str("address"),
+            energyAdded = o.dbl("charge_energy_added") ?: 0.0,
+            cost = o.dbl("cost"),
+            startBattery = bat.int("start_battery_level"),
+            battery = bat.int("current_battery_level"),
+            startRange = range.dbl("start_range"),
+            range = range.dbl("current_range"),
+            outsideTemp = o.dbl("outside_temp_avg"),
+            cable = latest?.str("conn_charge_cable").orEmpty(),
+            fastChargerType = latest?.optJSONObject("fast_charger_info")?.str("fast_charger_type").orEmpty(),
+            points = points,
         )
     }
 
@@ -394,6 +520,26 @@ class TeslaMateApi(private val conn: Connection) {
                 outsideTemp = o.dbl("outside_temp_avg"),
                 energyKwh = o.dbl("energy_consumed_net"),
                 consumption = o.dbl("consumption_net"),
+            )
+        }
+
+        fun parseChargePoint(d: JSONObject): ChargePoint {
+            val ch = d.optJSONObject("charger_details") ?: JSONObject()
+            val bi = d.optJSONObject("battery_info") ?: JSONObject()
+            val fc = d.optJSONObject("fast_charger_info")
+            return ChargePoint(
+                time = d.date("date"),
+                battery = d.int("battery_level"),
+                energyAdded = d.dbl("charge_energy_added"),
+                power = ch.dbl("charger_power"),
+                voltage = ch.dbl("charger_voltage"),
+                current = ch.dbl("charger_actual_current"),
+                pilotCurrent = ch.dbl("charger_pilot_current"),
+                phases = ch.int("charger_phases"),
+                ratedRange = bi.dbl("rated_battery_range"),
+                heaterOn = bi.optBoolean("battery_heater_on"),
+                fastCharger = if (fc == null || !fc.has("fast_charger_present") || fc.isNull("fast_charger_present")) null
+                else fc.optBoolean("fast_charger_present"),
             )
         }
 

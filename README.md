@@ -2,7 +2,8 @@
 
 Appli Android perso pour consulter et **filtrer** ses données TeslaMate via la [TeslaMate API](https://github.com/tobiasehlert/teslamateapi) (hébergée par MyTeslaMate ou auto-hébergée).
 
-- **État** : batterie, autonomie, charge en cours, position (OpenStreetMap), portes, sentinelle, pneus, santé batterie.
+- **État** : batterie, autonomie, position (OpenStreetMap), portes, sentinelle, pneus, santé batterie.
+- **Charge en cours** : actualisée toutes les 30 s pendant la charge : puissance, kWh et km ajoutés, heure de fin, coût estimé, tension / intensité / phases (et ce qui limite la charge), courbes de puissance et de batterie.
 - **Trajets** : recherche par lieu, période (raccourcis ou dates au choix), distance, tri ; totaux et conso moyenne de la sélection ; détail avec tracé, vitesse, puissance, altitude.
 - **Charges** : lieu (raccourcis vers les plus fréquents), période, AC/DC, payantes ; énergie, coût, prix moyen au kWh ; détail avec courbe de puissance.
 - **Stats** : par mois ou par année : distance, énergie, coût, conso ; destinations et lieux de charge fréquents.
