@@ -1,0 +1,404 @@
+{
+  "data": {
+    "car": {
+      "car_id": 1,
+      "car_name": "Voiture test"
+    },
+    "drives": [
+      {
+        "drive_id": 5661,
+        "start_date": "2026-11-18T08:04:51+01:00",
+        "end_date": "2026-11-18T08:17:48+01:00",
+        "start_address": "Domicile",
+        "end_address": "Parc relais du Nord, Villeneuve",
+        "odometer_details": {
+          "odometer_start": 12138.403966,
+          "odometer_end": 12145.176425,
+          "odometer_distance": 6.772458999999799
+        },
+        "duration_min": 13,
+        "duration_str": "00:13",
+        "speed_max": 90,
+        "speed_avg": 31.25750307692215,
+        "battery_details": {
+          "start_usable_battery_level": 50,
+          "start_battery_level": 50,
+          "end_usable_battery_level": 48,
+          "end_battery_level": 48
+        },
+        "outside_temp_avg": 12.3,
+        "inside_temp_avg": 18.1,
+        "energy_consumed_net": 0.9392688,
+        "consumption_net": 138.68947748521296
+      },
+      {
+        "drive_id": 5658,
+        "start_date": "2026-11-17T18:22:21+01:00",
+        "end_date": "2026-11-17T18:37:35+01:00",
+        "start_address": "Supermarché, Villeneuve",
+        "end_address": "Domicile",
+        "odometer_details": {
+          "odometer_start": 12133.100147,
+          "odometer_end": 12137.103966,
+          "odometer_distance": 4.003818999997748
+        },
+        "duration_min": 15,
+        "duration_str": "00:15",
+        "speed_max": 79,
+        "speed_avg": 16.01527599999099,
+        "battery_details": {
+          "start_usable_battery_level": 51,
+          "start_battery_level": 51,
+          "end_usable_battery_level": 50,
+          "end_battery_level": 50
+        },
+        "outside_temp_avg": 12.5,
+        "inside_temp_avg": 19.1,
+        "energy_consumed_net": 0.61794,
+        "consumption_net": 154.33764613244193
+      },
+      {
+        "drive_id": 5657,
+        "start_date": "2026-11-17T17:59:47+01:00",
+        "end_date": "2026-11-17T18:14:57+01:00",
+        "start_address": "Parc relais Nord, Villeneuve",
+        "end_address": "Supermarché, Villeneuve",
+        "odometer_details": {
+          "odometer_start": 12128.242771,
+          "odometer_end": 12131.800147,
+          "odometer_distance": 3.5573760000042967
+        },
+        "duration_min": 15,
+        "duration_str": "00:15",
+        "speed_max": 60,
+        "speed_avg": 14.229504000017187,
+        "battery_details": {
+          "start_usable_battery_level": 52,
+          "start_battery_level": 52,
+          "end_usable_battery_level": 51,
+          "end_battery_level": 51
+        },
+        "outside_temp_avg": 13.3,
+        "inside_temp_avg": 18.9,
+        "energy_consumed_net": 0.4998448,
+        "consumption_net": 140.50940918232885
+      },
+      {
+        "drive_id": 5655,
+        "start_date": "2026-11-17T08:27:34+01:00",
+        "end_date": "2026-11-17T08:43:21+01:00",
+        "start_address": "Domicile",
+        "end_address": "Parc relais Nord, Villeneuve",
+        "odometer_details": {
+          "odometer_start": 12120.250151,
+          "odometer_end": 12126.942771,
+          "odometer_distance": 6.692620000001625
+        },
+        "duration_min": 16,
+        "duration_str": "00:16",
+        "speed_max": 92,
+        "speed_avg": 25.097325000006094,
+        "battery_details": {
+          "start_usable_battery_level": 58,
+          "start_battery_level": 58,
+          "end_usable_battery_level": 56,
+          "end_battery_level": 56
+        },
+        "outside_temp_avg": 13,
+        "inside_temp_avg": 17.3,
+        "energy_consumed_net": 0.9996896,
+        "consumption_net": 149.37193505678752
+      },
+      {
+        "drive_id": 5625,
+        "start_date": "2026-11-13T09:35:40+01:00",
+        "end_date": "2026-11-13T09:59:44+01:00",
+        "start_address": "Avenue des Sports, Montfort",
+        "end_address": "Allée des Musiciens, Villeneuve",
+        "odometer_details": {
+          "odometer_start": 12094.30112,
+          "odometer_end": 12118.950151,
+          "odometer_distance": 24.649031000000832
+        },
+        "duration_min": 24,
+        "duration_str": "00:24",
+        "speed_max": 109,
+        "speed_avg": 61.62257750000208,
+        "battery_details": {
+          "start_usable_battery_level": 81,
+          "start_battery_level": 81,
+          "end_usable_battery_level": 75,
+          "end_battery_level": 75
+        },
+        "outside_temp_avg": 4.7,
+        "inside_temp_avg": 20.8,
+        "energy_consumed_net": 3.7199988,
+        "consumption_net": 150.91866288779767
+      },
+      {
+        "drive_id": 5624,
+        "start_date": "2026-11-13T07:34:18+01:00",
+        "end_date": "2026-11-13T08:01:11+01:00",
+        "start_address": "Domicile",
+        "end_address": "Avenue des Sports, Montfort",
+        "odometer_details": {
+          "odometer_start": 12066.507914,
+          "odometer_end": 12093.00112,
+          "odometer_distance": 26.49320599999919
+        },
+        "duration_min": 27,
+        "duration_str": "00:27",
+        "speed_max": 113,
+        "speed_avg": 58.87379111110931,
+        "battery_details": {
+          "start_usable_battery_level": 88,
+          "start_battery_level": 88,
+          "end_usable_battery_level": 82,
+          "end_battery_level": 82
+        },
+        "outside_temp_avg": 4.3,
+        "inside_temp_avg": 21.1,
+        "energy_consumed_net": 3.4796888,
+        "consumption_net": 131.34268461129642
+      },
+      {
+        "drive_id": 5620,
+        "start_date": "2026-11-12T17:58:42+01:00",
+        "end_date": "2026-11-12T18:17:10+01:00",
+        "start_address": "Parc relais Nord, Villeneuve",
+        "end_address": "Domicile",
+        "odometer_details": {
+          "odometer_start": 12058.297529,
+          "odometer_end": 12065.207914,
+          "odometer_distance": 6.9103850000028615
+        },
+        "duration_min": 18,
+        "duration_str": "00:18",
+        "speed_max": 103,
+        "speed_avg": 23.034616666676204,
+        "battery_details": {
+          "start_usable_battery_level": 66,
+          "start_battery_level": 66,
+          "end_usable_battery_level": 64,
+          "end_battery_level": 64
+        },
+        "outside_temp_avg": 11.5,
+        "inside_temp_avg": 18.5,
+        "energy_consumed_net": 0.9790916,
+        "consumption_net": 141.6840885130994
+      },
+      {
+        "drive_id": 5619,
+        "start_date": "2026-11-12T08:30:11+01:00",
+        "end_date": "2026-11-12T08:46:54+01:00",
+        "start_address": "Domicile",
+        "end_address": "Parc relais Nord, Villeneuve",
+        "odometer_details": {
+          "odometer_start": 12049.867031,
+          "odometer_end": 12056.997529,
+          "odometer_distance": 7.130497999998624
+        },
+        "duration_min": 17,
+        "duration_str": "00:17",
+        "speed_max": 100,
+        "speed_avg": 25.16646352940691,
+        "battery_details": {
+          "start_usable_battery_level": 71,
+          "start_battery_level": 71,
+          "end_usable_battery_level": 70,
+          "end_battery_level": 70
+        },
+        "outside_temp_avg": 12.3,
+        "inside_temp_avg": 18,
+        "energy_consumed_net": 1.0999332,
+        "consumption_net": 154.25755676534965
+      },
+      {
+        "drive_id": 5617,
+        "start_date": "2026-11-11T13:03:50+01:00",
+        "end_date": "2026-11-11T13:04:23+01:00",
+        "start_address": "Domicile",
+        "end_address": "Domicile",
+        "odometer_details": {
+          "odometer_start": 12048.526533,
+          "odometer_end": 12048.567031,
+          "odometer_distance": 0.040498000002116896
+        },
+        "duration_min": 1,
+        "duration_str": "00:01",
+        "speed_max": 5,
+        "speed_avg": 2.4298800001270138,
+        "battery_details": {
+          "start_usable_battery_level": 72,
+          "start_battery_level": 72,
+          "end_usable_battery_level": 72,
+          "end_battery_level": 72
+        },
+        "outside_temp_avg": 15.5,
+        "inside_temp_avg": 19,
+        "energy_consumed_net": null,
+        "consumption_net": null
+      },
+      {
+        "drive_id": 5616,
+        "start_date": "2026-11-11T12:57:37+01:00",
+        "end_date": "2026-11-11T13:02:50+01:00",
+        "start_address": "Route de Nantes, Villeneuve",
+        "end_address": "Domicile",
+        "odometer_details": {
+          "odometer_start": 12045.106889,
+          "odometer_end": 12047.226533,
+          "odometer_distance": 2.119643999998516
+        },
+        "duration_min": 5,
+        "duration_str": "00:05",
+        "speed_max": 76,
+        "speed_avg": 25.43572799998219,
+        "battery_details": {
+          "start_usable_battery_level": 72,
+          "start_battery_level": 72,
+          "end_usable_battery_level": 72,
+          "end_battery_level": 72
+        },
+        "outside_temp_avg": 15.5,
+        "inside_temp_avg": 19,
+        "energy_consumed_net": 0.260908,
+        "consumption_net": 123.09048123184017
+      },
+      {
+        "drive_id": 5615,
+        "start_date": "2026-11-11T12:47:35+01:00",
+        "end_date": "2026-11-11T12:56:58+01:00",
+        "start_address": "Rue du Lavoir, Bourg-Neuf",
+        "end_address": "Route de Nantes, Villeneuve",
+        "odometer_details": {
+          "odometer_start": 12033.167574,
+          "odometer_end": 12043.806889,
+          "odometer_distance": 10.639315000000352
+        },
+        "duration_min": 9,
+        "duration_str": "00:09",
+        "speed_max": 103,
+        "speed_avg": 70.928766666669,
+        "battery_details": {
+          "start_usable_battery_level": 75,
+          "start_battery_level": 75,
+          "end_usable_battery_level": 72,
+          "end_battery_level": 72
+        },
+        "outside_temp_avg": 15.2,
+        "inside_temp_avg": 19,
+        "energy_consumed_net": 1.3196451999999999,
+        "consumption_net": 124.0347898337399
+      },
+      {
+        "drive_id": 5614,
+        "start_date": "2026-11-11T11:48:04+01:00",
+        "end_date": "2026-11-11T11:58:05+01:00",
+        "start_address": "Rue des Tilleuls, Saint-Aubin",
+        "end_address": "Rue du Lavoir, Bourg-Neuf",
+        "odometer_details": {
+          "odometer_start": 12025.730752,
+          "odometer_end": 12031.867574,
+          "odometer_distance": 6.136822000000393
+        },
+        "duration_min": 10,
+        "duration_str": "00:10",
+        "speed_max": 103,
+        "speed_avg": 36.82093200000236,
+        "battery_details": {
+          "start_usable_battery_level": 77,
+          "start_battery_level": 77,
+          "end_usable_battery_level": 75,
+          "end_battery_level": 75
+        },
+        "outside_temp_avg": 14.3,
+        "inside_temp_avg": 21,
+        "energy_consumed_net": 0.899446,
+        "consumption_net": 146.5654372898452
+      },
+      {
+        "drive_id": 5612,
+        "start_date": "2026-11-11T11:03:52+01:00",
+        "end_date": "2026-11-11T11:13:08+01:00",
+        "start_address": "Domicile",
+        "end_address": "Rue des Tilleuls, Saint-Aubin",
+        "odometer_details": {
+          "odometer_start": 12017.90762,
+          "odometer_end": 12024.430752,
+          "odometer_distance": 6.523132000002079
+        },
+        "duration_min": 9,
+        "duration_str": "00:09",
+        "speed_max": 97,
+        "speed_avg": 43.48754666668052,
+        "battery_details": {
+          "start_usable_battery_level": 78,
+          "start_battery_level": 78,
+          "end_usable_battery_level": 77,
+          "end_battery_level": 77
+        },
+        "outside_temp_avg": 13.3,
+        "inside_temp_avg": 18.3,
+        "energy_consumed_net": 0.8198004,
+        "consumption_net": 125.67588698185762
+      },
+      {
+        "drive_id": 5610,
+        "start_date": "2026-11-10T17:55:11+01:00",
+        "end_date": "2026-11-10T18:14:41+01:00",
+        "start_address": "Parc relais Nord, Villeneuve",
+        "end_address": "Domicile",
+        "odometer_details": {
+          "odometer_start": 12008.297899,
+          "odometer_end": 12016.60762,
+          "odometer_distance": 8.309720999997808
+        },
+        "duration_min": 20,
+        "duration_str": "00:20",
+        "speed_max": 101,
+        "speed_avg": 24.929162999993423,
+        "battery_details": {
+          "start_usable_battery_level": 81,
+          "start_battery_level": 81,
+          "end_usable_battery_level": 79,
+          "end_battery_level": 79
+        },
+        "outside_temp_avg": 14,
+        "inside_temp_avg": 18.9,
+        "energy_consumed_net": 1.1013064,
+        "consumption_net": 132.53229560899703
+      },
+      {
+        "drive_id": 5609,
+        "start_date": "2026-11-10T08:26:13+01:00",
+        "end_date": "2026-11-10T08:42:11+01:00",
+        "start_address": "Domicile",
+        "end_address": "Parc relais Nord, Villeneuve",
+        "odometer_details": {
+          "odometer_start": 12000.0,
+          "odometer_end": 12006.997899,
+          "odometer_distance": 6.99789900000178
+        },
+        "duration_min": 16,
+        "duration_str": "00:16",
+        "speed_max": 90,
+        "speed_avg": 26.242121250006676,
+        "battery_details": {
+          "start_usable_battery_level": 86,
+          "start_battery_level": 86,
+          "end_usable_battery_level": 84,
+          "end_battery_level": 84
+        },
+        "outside_temp_avg": 12.2,
+        "inside_temp_avg": 18.2,
+        "energy_consumed_net": 0.8815944,
+        "consumption_net": 125.97986910067947
+      }
+    ],
+    "units": {
+      "unit_of_length": "km",
+      "unit_of_temperature": "C"
+    }
+  }
+}

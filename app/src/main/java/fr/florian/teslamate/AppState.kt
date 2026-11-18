@@ -154,8 +154,8 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
                 val newCharges = withContext(Dispatchers.IO) {
                     api.charges(id, cSince) { n -> if (cSince == null) progress = "Synchronisation complète : $n charges…" }
                 }
-                val d = merge(if (full) emptyList() else drives, newDrives, { it.id }, { it.start })
-                val c = merge(if (full) emptyList() else charges, newCharges, { it.id }, { it.start })
+                val d = mergeById(if (full) emptyList() else drives, newDrives, { it.id }, { it.start })
+                val c = mergeById(if (full) emptyList() else charges, newCharges, { it.id }, { it.start })
                 drives = d
                 charges = c
                 withContext(Dispatchers.IO) {
@@ -277,13 +277,6 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         }
     }
 
-    private fun <T, K : Comparable<K>> merge(old: List<T>, new: List<T>, id: (T) -> Int, key: (T) -> K): List<T> {
-        val byId = LinkedHashMap<Int, T>()
-        old.forEach { byId[id(it)] = it }
-        new.forEach { byId[id(it)] = it }
-        return byId.values.sortedByDescending(key)
-    }
-
     /** Test de connexion pour l'écran Réglages. */
     suspend fun test(c: Connection): String = withContext(Dispatchers.IO) {
         try {
@@ -298,6 +291,14 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
 
 /** Période du rafraîchissement en direct pendant une charge. */
 const val LIVE_PERIOD_MS = 30_000L
+
+/** Fusion du delta dans le cache : les éléments de [new] remplacent ceux de même id, tri décroissant selon [key]. */
+fun <T, K : Comparable<K>> mergeById(old: List<T>, new: List<T>, id: (T) -> Int, key: (T) -> K): List<T> {
+    val byId = LinkedHashMap<Int, T>()
+    old.forEach { byId[id(it)] = it }
+    new.forEach { byId[id(it)] = it }
+    return byId.values.sortedByDescending(key)
+}
 
 /** Garde au plus [max] points régulièrement espacés (premier et dernier inclus). */
 fun List<GeoPoint>.simplify(max: Int): List<GeoPoint> {
