@@ -58,7 +58,7 @@ fun SettingsScreen(app: AppState) {
                 url, { url = it },
                 Modifier.fillMaxWidth(),
                 label = { Text("Adresse de l'API") },
-                placeholder = { Text("https://xxxx.api.myteslamate.com") },
+                placeholder = { Text("https://teslamateapi.mondomaine.fr") },
                 singleLine = true,
                 // HTTPS obligatoire : le mot de passe ne doit jamais circuler en clair
                 isError = insecure,
