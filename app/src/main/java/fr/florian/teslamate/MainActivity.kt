@@ -165,7 +165,17 @@ fun MainScreen(app: AppState) {
                     Tab.STATUS -> StatusScreen(app) { openCharge = it }
                     Tab.DRIVES -> DrivesScreen(app, driveFilter, { driveFilter = it }) { openDrive = it }
                     Tab.CHARGES -> ChargesScreen(app, chargeFilter, { chargeFilter = it }) { openCharge = it }
-                    Tab.STATS -> StatsScreen(app)
+                    Tab.STATS -> StatsScreen(app) { day, metric ->
+                        // Calendrier d'activité : ouvrir la liste filtrée sur ce jour
+                        val period = Period(day.format(java.time.format.DateTimeFormatter.ofPattern("d/M/yyyy")), day, day.plusDays(1))
+                        if (metric == CalendarMetric.KM) {
+                            driveFilter = driveFilter.copy(period = period, distance = DistanceRange.ALL, query = "", map = false)
+                            tab = Tab.DRIVES
+                        } else {
+                            chargeFilter = chargeFilter.copy(period = period, type = ChargeType.ALL, query = "", paidOnly = false, map = false)
+                            tab = Tab.CHARGES
+                        }
+                    }
                     Tab.SETTINGS -> SettingsScreen(app)
                 }
             }

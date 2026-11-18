@@ -37,12 +37,13 @@ private data class Bucket(
 }
 
 enum class StatsView(val label: String) {
-    SUMMARY("Bilan"), ROUTES("Trajets types"), TEMPERATURE("Température"), IDLE("Pertes à l'arrêt"), SAVINGS("Économies"), UPDATES("Mises à jour"),
+    SUMMARY("Bilan"), CALENDAR("Calendrier"), ROUTES("Trajets types"), TEMPERATURE("Température"), IDLE("Pertes à l'arrêt"), SAVINGS("Économies"), UPDATES("Mises à jour"),
 }
 
 @Composable
-fun StatsScreen(app: AppState) {
+fun StatsScreen(app: AppState, onDay: (LocalDate, CalendarMetric) -> Unit) {
     var view by rememberSaveable { mutableStateOf(StatsView.SUMMARY) }
+    var metric by rememberSaveable { mutableStateOf(CalendarMetric.KM) }
     val years = remember(app.drives, app.charges) {
         (app.drives.map { it.start.local().year } + app.charges.map { it.start.local().year })
             .filter { it > 2000 }.distinct().sortedDescending()
@@ -62,6 +63,10 @@ fun StatsScreen(app: AppState) {
             Spacer(Modifier.height(4.dp))
             ChoiceChips(years.map { it to it.toString() } + (0 to "Tout"), year) { chosen = it }
         }
+        if (view == StatsView.CALENDAR) {
+            Spacer(Modifier.height(4.dp))
+            ChoiceChips(CalendarMetric.entries.map { it to it.label }, metric) { metric = it }
+        }
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (view == StatsView.UPDATES) {
                 UpdatesSection(app.updates)
@@ -72,6 +77,7 @@ fun StatsScreen(app: AppState) {
                 return@Column
             }
             when (view) {
+                StatsView.CALENDAR -> { CalendarSection(drives, charges, year, metric, onDay); return@Column }
                 StatsView.ROUTES -> { RoutesSection(drives, app.drives); return@Column }
                 StatsView.TEMPERATURE -> { TemperatureSection(drives); return@Column }
                 StatsView.IDLE -> { IdleSection(app, year); return@Column }

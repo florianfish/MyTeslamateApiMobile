@@ -9,6 +9,7 @@ Elle fonctionne avec **n'importe quelle instance TeslaMate couplée à TeslaMate
 - **Trajets** : recherche par lieu, période (raccourcis ou dates au choix), distance, tri ; totaux et conso moyenne de la sélection ; détail avec tracé, vitesse, puissance, altitude.
 - **Charges** : lieu (raccourcis vers les plus fréquents), période, AC/DC, payantes ; énergie, coût, prix moyen au kWh ; détail avec courbe de puissance.
 - **Stats** : par mois ou par année : distance, énergie, coût, conso ; destinations et lieux de charge fréquents.
+  **Calendrier** d'activité façon GitHub (km parcourus ou kWh chargés par jour) : toucher un jour ouvre ses trajets ou ses charges.
 
 <p align="center">
   <img src="docs/etat.png" width="22%" alt="État" />
