@@ -16,4 +16,5 @@ jobs:
     with:
       apk-name: MyTeslamateApiMobile
       gradle-version: "9.9.1"
+      gradle-tasks: assembleDebug testDebugUnitTest # tests JVM des calculs (app/src/test)
     secrets: inherit

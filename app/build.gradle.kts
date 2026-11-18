@@ -55,4 +55,14 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("org.osmdroid:osmdroid-android:6.1.20") // cartes OpenStreetMap, sans clé
+
+    // Tests JVM des calculs (app/src/test)
+    testImplementation("junit:junit:4.13.2")
+    // Sur la JVM, android.jar ne contient qu'un bouchon d'org.json : vraie implémentation pour les tests
+    testImplementation("org.json:json:20250517")
+}
+
+// Les périodes sont découpées en jours locaux : fuseau fixe pour des tests reproductibles (la CI tourne en UTC)
+tasks.withType<Test>().configureEach {
+    systemProperty("user.timezone", "Europe/Paris")
 }
