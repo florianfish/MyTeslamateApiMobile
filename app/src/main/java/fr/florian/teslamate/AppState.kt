@@ -6,8 +6,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.OffsetDateTime
 
 /**
  * État global de l'appli : connexion, voiture choisie, historique (trajets / charges),
@@ -30,6 +34,13 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
     var health by mutableStateOf<BatteryHealth?>(null)
         private set
     var updates by mutableStateOf<List<SoftwareUpdate>>(emptyList())
+        private set
+
+    /** Charge en cours (null hors charge, ou si l'instance n'a pas l'endpoint /charges/current). */
+    var currentCharge by mutableStateOf<CurrentCharge?>(null)
+        private set
+    /** Heure du dernier relevé de l'état (synchro ou rafraîchissement en direct). */
+    var statusAt by mutableStateOf<OffsetDateTime?>(null)
         private set
 
     /** Tracés simplifiés des trajets (id → points), gardés sur disque : le détail d'un trajet pèse lourd. */
@@ -73,7 +84,7 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         connection = Connection.load(ctx)
         if (changed) {
             Cache.clear(ctx)
-            drives = emptyList(); charges = emptyList(); status = null; health = null; cars = emptyList(); paths = emptyMap(); updates = emptyList()
+            drives = emptyList(); charges = emptyList(); status = null; health = null; cars = emptyList(); paths = emptyMap(); updates = emptyList(); currentCharge = null
         }
         refresh()
     }
@@ -82,7 +93,7 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         if (id == carId) return
         carId = id
         ctx.getSharedPreferences("app", Context.MODE_PRIVATE).edit().putInt("car", id).apply()
-        drives = emptyList(); charges = emptyList(); status = null; health = null; updates = emptyList(); paths = emptyMap()
+        drives = emptyList(); charges = emptyList(); status = null; health = null; updates = emptyList(); paths = emptyMap(); currentCharge = null
         loadCache()
         refresh()
     }
@@ -124,6 +135,11 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
                 if (id == 0) return@launch
                 val st = withContext(Dispatchers.IO) { runCatching { api.status(id) }.getOrNull() }
                 status = st
+                statusAt = OffsetDateTime.now()
+                currentCharge = if (st?.isCharging == true) {
+                    withContext(Dispatchers.IO) { runCatching { api.currentCharge(id) }.getOrNull() }
+                } else null
+                updateLive()
                 health = withContext(Dispatchers.IO) { runCatching { api.batteryHealth(id) }.getOrNull() } ?: health
                 updates = withContext(Dispatchers.IO) { runCatching { api.updates(id) }.getOrNull() } ?: updates
 
@@ -157,6 +173,80 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
                 progress = null
             }
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Suivi en direct pendant une charge
+    // -----------------------------------------------------------------------
+
+    private var foreground = false
+    private var watchers = 0
+    private var liveJob: Job? = null
+
+    /** Appelée par MainActivity (onStart / onStop) : rien ne tourne quand l'appli est en arrière-plan. */
+    fun setForeground(on: Boolean) {
+        foreground = on
+        updateLive()
+    }
+
+    /** Un écran qui affiche la charge en cours s'abonne (true) puis se désabonne (false). */
+    fun watchLive(on: Boolean) {
+        watchers = (watchers + if (on) 1 else -1).coerceAtLeast(0)
+        updateLive()
+    }
+
+    /** Démarre ou arrête le rafraîchissement : seulement en charge, appli visible et écran concerné affiché. */
+    private fun updateLive() {
+        val wanted = foreground && watchers > 0 && status?.isCharging == true
+        if (wanted && liveJob?.isActive != true) {
+            liveJob = scope.launch {
+                while (isActive) {
+                    delay(LIVE_PERIOD_MS)
+                    liveRefresh()
+                }
+            }
+        } else if (!wanted) {
+            liveJob?.cancel()
+            liveJob = null
+        }
+    }
+
+    /**
+     * Relevé léger : seulement /status (quelques Ko). La courbe complète (/charges/current,
+     * plusieurs centaines de Ko) n'est téléchargée qu'une fois par charge, puis complétée par ces relevés.
+     */
+    private suspend fun liveRefresh() {
+        val id = carId
+        if (id == 0 || loading) return
+        val api = this.api
+        val st = withContext(Dispatchers.IO) { runCatching { api.status(id) }.getOrNull() } ?: return
+        val wasCharging = status?.isCharging == true
+        status = st
+        statusAt = OffsetDateTime.now()
+        if (st.isCharging) {
+            val cc = currentCharge
+            currentCharge = cc?.withStatus(st)
+                ?: withContext(Dispatchers.IO) { runCatching { api.currentCharge(id) }.getOrNull() }
+        } else {
+            currentCharge = null
+            // Charge terminée : synchro pour récupérer la charge complète dans l'historique
+            if (wasCharging) refresh()
+        }
+        updateLive()
+    }
+
+    /**
+     * Prix moyen au kWh des charges payantes déjà faites à [address] (les 10 plus récentes),
+     * pour estimer le coût d'une charge en cours. null si aucune référence.
+     */
+    fun usualPrice(address: String): Double? {
+        if (address.isBlank()) return null
+        val paid = charges
+            .filter { it.address == address && (it.cost ?: 0.0) > 0 && it.energyAdded >= 0.5 }
+            .sortedByDescending { it.start }
+            .take(10)
+        val energy = paid.sumOf { it.energyAdded }
+        return if (energy > 0) paid.sumOf { it.cost ?: 0.0 } / energy else null
     }
 
     /** Télécharge les tracés manquants des trajets [ids] (au plus [max]), puis les garde en cache. */
@@ -205,6 +295,9 @@ class AppState(private val ctx: Context, private val scope: CoroutineScope) {
         }
     }
 }
+
+/** Période du rafraîchissement en direct pendant une charge. */
+const val LIVE_PERIOD_MS = 30_000L
 
 /** Garde au plus [max] points régulièrement espacés (premier et dernier inclus). */
 fun List<GeoPoint>.simplify(max: Int): List<GeoPoint> {
